@@ -9,7 +9,18 @@ const SidebarLayout = ({ menus, children }) => {
   return (
     <div className="flex min-h-screen bg-gray-100 p-6">
       {/* Sidebar */}
-      <div className="w-60 bg-white rounded-3xl shadow-lg overflow-hidden border-t border-gray-200" style={{ height: '1032px', marginTop: '24px', marginLeft: '24px' }}>
+      <div
+        className="bg-blueGray-900 text-white shadow-md overflow-hidden"
+        style={{
+          width: '240px',
+          height: '1032px',
+          marginTop: '24px',
+          marginLeft: '24px',
+          borderRadius: '24px',
+          borderWidth: '0px 1px 0px 0px',
+          borderColor: '#101828',
+        }}
+      >
         <div className="p-6">
           <h1 className="text-xl font-bold mb-6">Menu Management</h1>
           <Button className="w-full mb-6">Create New Menu</Button>
