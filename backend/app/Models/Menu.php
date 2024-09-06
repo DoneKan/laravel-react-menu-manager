@@ -13,11 +13,11 @@ class Menu extends Model
 
     public function items()
     {
-        return $this->hasMany(MenuItem::class)->with('children');
+        return $this->hasMany(MenuItem::class);
     }
 
     public function rootItems()
     {
-        return $this->hasMany(MenuItem::class)->whereNull('parent_id')->with('children');
+        return $this->hasMany(MenuItem::class)->whereNull('parent_id')->orderBy('order');
     }
 }

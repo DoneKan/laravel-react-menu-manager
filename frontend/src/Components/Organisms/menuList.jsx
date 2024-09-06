@@ -2,7 +2,7 @@ import React from 'react';
 
 const MenuList = ({ selectedMenu }) => {
   if (!selectedMenu) {
-    return <p className="text-gray-500">Select a menu from the sidebar to manage its items.</p>;
+    return <p className="text-black">Select a menu from the sidebar to manage its items.</p>;
   }
 
   return (

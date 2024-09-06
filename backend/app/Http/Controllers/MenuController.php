@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Menu;
 use App\Models\MenuItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MenuController extends Controller
 {
@@ -56,53 +57,60 @@ class MenuController extends Controller
 
         return response()->json($menuItem, 201);
     }
+
     public function moveItem(Request $request, MenuItem $menuItem)
-       {
-           $validatedData = $request->validate([
-               'new_parent_id' => 'nullable|exists:menu_items,id',
-           ]);
+    {
+        try {
+            DB::beginTransaction();
 
-           $newParentId = $validatedData['new_parent_id'];
-           $newDepth = 0;
+            $validatedData = $request->validate([
+                'new_parent_id' => 'nullable|exists:menu_items,id',
+            ]);
 
-           if ($newParentId) {
-               $newParent = MenuItem::findOrFail($newParentId);
-               $newDepth = $newParent->depth + 1;
-           }
+            $newParentId = $validatedData['new_parent_id'];
+            $newDepth = 0;
 
-           $menuItem->update([
-               'parent_id' => $newParentId,
-               'depth' => $newDepth,
-           ]);
+            if ($newParentId) {
+                $newParent = MenuItem::findOrFail($newParentId);
+                $newDepth = $newParent->depth + 1;
+            }
 
-           // Update depth for all child items
-           $this->updateChildrenDepth($menuItem);
+            $menuItem->update([
+                'parent_id' => $newParentId,
+                'depth' => $newDepth,
+            ]);
 
-           return response()->json($menuItem);
-       }
+            $this->updateChildrenDepth($menuItem);
 
-       private function updateChildrenDepth(MenuItem $parent)
-       {
-           $children = MenuItem::where('parent_id', $parent->id)->get();
-
-           foreach ($children as $child) {
-               $child->update(['depth' => $parent->depth + 1]);
-               $this->updateChildrenDepth($child);
-           }
-       }
-
-       public function bulkDelete(Request $request)
-       {
-           $validatedData = $request->validate([
-               'item_ids' => 'required|array',
-               'item_ids.*' => 'exists:menu_items,id',
-           ]);
-
-           MenuItem::whereIn('id', $validatedData['item_ids'])->delete();
-
-           return response()->json(['message' => 'Items deleted successfully']);
-       
+            DB::commit();
+            return response()->json($menuItem);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Failed to move item: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function updateChildrenDepth(MenuItem $parent)
+    {
+        $children = MenuItem::where('parent_id', $parent->id)->get();
+
+        foreach ($children as $child) {
+            $child->update(['depth' => $parent->depth + 1]);
+            $this->updateChildrenDepth($child);
+        }
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $validatedData = $request->validate([
+            'item_ids' => 'required|array',
+            'item_ids.*' => 'exists:menu_items,id',
+        ]);
+
+        MenuItem::whereIn('id', $validatedData['item_ids'])->delete();
+
+        return response()->json(['message' => 'Items deleted successfully']);
+    }
 
     public function updateItem(Request $request, MenuItem $menuItem)
     {
@@ -119,20 +127,21 @@ class MenuController extends Controller
         $menuItem->delete();
         return response()->json(null, 204);
     }
+
     public function reorderItems(Request $request, Menu $menu)
-{
-    $validatedData = $request->validate([
-        'items' => 'required|array',
-        'items.*.id' => 'required|exists:menu_items,id',
-        'items.*.order' => 'required|integer|min:0',
-    ]);
+    {
+        $validatedData = $request->validate([
+            'items' => 'required|array',
+            'items.*.id' => 'required|exists:menu_items,id',
+            'items.*.order' => 'required|integer|min:0',
+        ]);
 
-    foreach ($validatedData['items'] as $item) {
-        MenuItem::where('id', $item['id'])
-            ->where('menu_id', $menu->id)
-            ->update(['order' => $item['order']]);
+        foreach ($validatedData['items'] as $item) {
+            MenuItem::where('id', $item['id'])
+                ->where('menu_id', $menu->id)
+                ->update(['order' => $item['order']]);
+        }
+
+        return response()->json(['message' => 'Items reordered successfully']);
     }
-
-    return response()->json(['message' => 'Items reordered successfully']);
-}
 }
